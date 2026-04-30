@@ -1,0 +1,31 @@
+# Prerequisites
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+client/.env
+server/.env
+
+# Build outputs
+dist/
+build/
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
