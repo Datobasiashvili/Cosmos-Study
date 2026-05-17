@@ -18,13 +18,13 @@ const Auth0ProviderWithNavigate = ({ children }) => {
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       onRedirectCallback={onRedirectCallback}
-      useRefreshTokens={true}
-      cacheLocation="localstorage"
       authorizationParams={{
         redirect_uri: window.location.origin,
         audience: "https://api.cosmos.study",
-        scope: "openid profile email offline_access"
+        scope: "openid profile email offline_access",
       }}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
     >
       {children}
     </Auth0Provider>

@@ -32,7 +32,7 @@ export default function CosmosLayout() {
   const currentPath = location.pathname.split("/")[1] || "dashboard";
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row font-mono text-white">
+    <div className="font-mono text-white">
       <aside className="hidden md:flex flex-col w-56 min-h-screen relative border-r border-white/5 bg-[#080b14] shrink-0">
         <StarField />
         <div className="relative z-10 px-5 pt-7 pb-8">

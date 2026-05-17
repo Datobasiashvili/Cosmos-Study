@@ -18,7 +18,6 @@ export default function App() {
         />
         <Route
           path="/cosmos"
-          element={<div className="p-10">Cosmos Content</div>}
         />
         <Route
           path="/settings"

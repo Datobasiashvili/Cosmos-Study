@@ -2,8 +2,9 @@ const User = require("../models/User");
 
 const addCourse = async (req, res) => {
   try {
-    const { title, description, color, icon } = req.body;
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const { title, color } = req.body;
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+    const user = await User.findOne({ auth0Id });
 
     if (!user) {
       return res
@@ -11,7 +12,7 @@ const addCourse = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const newCourse = { title, description, color, icon };
+    const newCourse = { title, color };
     user.courses.push(newCourse);
     await user.save();
 
@@ -25,9 +26,8 @@ const addCourse = async (req, res) => {
 
 const getCourses = async (req, res) => {
   try {
-    const user = await User.findOne({ auth0Id: req.user.sub }).select(
-      "courses",
-    );
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+    const user = await User.findOne({ auth0Id }).select("courses");
 
     if (!user) {
       return res
@@ -46,7 +46,8 @@ const getCourses = async (req, res) => {
 const updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+    const user = await User.findOne({ auth0Id });
 
     if (!user) {
       return res
@@ -77,7 +78,8 @@ const updateCourse = async (req, res) => {
 const deleteCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+    const user = await User.findOne({ auth0Id });
 
     if (!user) {
       return res

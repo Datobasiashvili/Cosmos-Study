@@ -59,5 +59,46 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+
+userSchema.statics.getStudyCalendar = async function(auth0Id) {
+  const user = await this.findOne({ auth0Id });
+  if (!user) return [];
+
+  const activityMap = {};
+
+  user.courses.forEach(course => {
+    course.sessions.forEach(session => {
+      const dateKey = session.startTime.toISOString().split('T')[0];
+      
+      if (!activityMap[dateKey]) {
+        activityMap[dateKey] = { count: 0, totalXp: 0, date: dateKey };
+      }
+      activityMap[dateKey].count += 1;
+      activityMap[dateKey].totalXp += session.xpEarned || 0;
+    });
+  });
+
+  return Object.values(activityMap); 
+};
+
+
+userSchema.statics.getGlobalStats = async function(auth0Id) {
+  const user = await this.findOne({ auth0Id });
+  if (!user) return null;
+
+  const totalSessions = user.courses.reduce((acc, course) => acc + course.sessions.length, 0);
+  const totalMinutes = user.courses.reduce((acc, course) => {
+    return acc + course.sessions.reduce((sAcc, s) => sAcc + (s.duration || 0), 0);
+  }, 0);
+
+  return {
+    level: user.level,
+    totalXp: user.totalXp,
+    totalSessions,
+    totalHours: (totalMinutes / 60).toFixed(1),
+    courseCount: user.courses.length
+  };
+};
+
 const User = mongoose.model("User", userSchema);
 module.exports = User;

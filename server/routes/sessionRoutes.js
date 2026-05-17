@@ -14,18 +14,21 @@ const {
 } = require("../middlewares/schemas/sessionSchemas");
 
 router.get("/", requireAuth, getSessions);
+
 router.post(
   "/",
   requireAuth,
   validateRequest(startSessionSchema),
   startSession,
 );
+
 router.patch(
   "/:sessionId/complete",
   requireAuth,
   validateRequest(completeSessionSchema),
   completeSession,
 );
+
 router.delete("/:sessionId", requireAuth, deleteSession);
 
 module.exports = router;
