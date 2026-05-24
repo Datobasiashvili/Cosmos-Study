@@ -5,7 +5,7 @@ import { navItems } from "../utils/navItems";
 import { StarField } from "../utils/starField";
 
 export default function CosmosLayout() {
-  const { user, isAuthenticated, isLoading } = useAuth0();
+  const { user } = useAuth0();
   const location = useLocation();
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);
@@ -41,7 +41,7 @@ export default function CosmosLayout() {
               <div className="w-2 h-2 rounded-full bg-indigo-300" />
             </div>
             <span className="text-sm tracking-[0.15em] uppercase text-indigo-200/70 font-light">
-              Cosmos Study
+              Cosmo Study
             </span>
           </div>
         </div>
@@ -94,7 +94,6 @@ export default function CosmosLayout() {
         </div>
       </aside>
 
-      {/* ── MOBILE BOTTOM NAV ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16">
         <div className="absolute inset-0 bg-[#080b14]/80 backdrop-blur-xl border-t border-white/5" />
         <div className="relative z-10 flex items-center justify-around h-full px-2">

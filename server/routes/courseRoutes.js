@@ -5,6 +5,7 @@ const {
   getCourses,
   updateCourse,
   deleteCourse,
+  archiveCourse
 } = require("../controllers/courseControllers");
 const validateRequest = require("../middlewares/validateRequest");
 const {
@@ -23,6 +24,12 @@ router.patch(
   validateRequest(updateCourseSchema),
   updateCourse,
 );
+
+router.patch(
+  "/:courseId/archive",
+  requireAuth,
+  archiveCourse,
+)
 
 router.delete("/:courseId", requireAuth, deleteCourse);
 

@@ -103,4 +103,32 @@ const deleteCourse = async (req, res) => {
   }
 };
 
-module.exports = { addCourse, getCourses, updateCourse, deleteCourse };
+const archiveCourse = async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+
+    const user = await User.findOne({ auth0Id });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const course = user.courses.id(courseId);
+    if (!course) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
+    }
+    course.archived = true;
+    await user.save();
+    res.status(200).json({ success: true, message: "Course archived", course });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+module.exports = {
+  addCourse,
+  getCourses,
+  updateCourse,
+  deleteCourse,
+  archiveCourse,
+};

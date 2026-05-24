@@ -23,7 +23,7 @@ router.post(
 );
 
 router.patch(
-  "/:sessionId/complete",
+  "/:sessionId",
   requireAuth,
   validateRequest(completeSessionSchema),
   completeSession,

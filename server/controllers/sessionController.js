@@ -4,7 +4,8 @@ const User = require("../models/User");
 const startSession = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { description, pomodoroSettings } = req.body;
+    // const { description, pomodoroSettings } = req.body;
+    const { description } = req.body;
 
     const user = await User.findOne({ auth0Id: req.auth.payload.sub });
     if (!user)
@@ -29,7 +30,7 @@ const startSession = async (req, res) => {
       description,
       startTime: new Date(),
       completed: false,
-      pomodoroSettings: pomodoroSettings || user.pomodoroSettings,
+      // pomodoroSettings: pomodoroSettings || user.pomodoroSettings,
     };
 
     course.sessions.push(newSession);
@@ -43,11 +44,11 @@ const startSession = async (req, res) => {
   }
 };
 
-// PATCH /api/courses/:courseId/sessions/:sessionId/complete
+// PATCH /api/courses/:courseId/sessions/:sessionId
 const completeSession = async (req, res) => {
   try {
     const { courseId, sessionId } = req.params;
-    const { duration, notes } = req.body;
+    const { duration } = req.body
 
     const user = await User.findOne({ auth0Id: req.auth.payload.sub });
     if (!user)
@@ -77,7 +78,6 @@ const completeSession = async (req, res) => {
     session.duration = duration;
     session.completed = true;
     session.xpEarned = xpEarned;
-    if (notes) session.notes = notes;
 
     course.totalXp += xpEarned;
     user.totalXp += xpEarned;

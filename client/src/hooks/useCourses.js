@@ -81,5 +81,41 @@ export function useCourse() {
     [isAuthenticated, getAccessTokenSilently],
   );
 
-  return { courses, fetchCourses, isLoading, createCourse, error };
+  const archiveCourse = useCallback(
+    async (courseId) => {
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/archive`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (!response.ok)
+          throw new Error(`Server responded with status: ${response.status}`);
+
+        setCourses((prev) =>
+          prev.map((c) => (c._id === courseId ? { ...c, archived: true } : c)),
+        );
+      } catch (err) {
+        console.error("Error archiving course:", err.message);
+        setError(err.message);
+      }
+    },
+    [getAccessTokenSilently],
+  );
+
+  return {
+    courses,
+    fetchCourses,
+    isLoading,
+    createCourse,
+    error,
+    archiveCourse,
+  };
 }

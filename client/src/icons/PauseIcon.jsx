@@ -1,0 +1,6 @@
+export const PauseIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="5" y="3" width="5" height="18" rx="1.5" />
+    <rect x="14" y="3" width="5" height="18" rx="1.5" />
+  </svg>
+);

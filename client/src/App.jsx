@@ -3,6 +3,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Layout from "./Layout";
+import Cosmos from "./pages/Cosmos";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         />
         <Route
           path="/cosmos"
+          element={<Cosmos />}
         />
         <Route
           path="/settings"
