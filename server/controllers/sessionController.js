@@ -1,10 +1,10 @@
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 // POST /api/courses/:courseId/sessions
 const startSession = async (req, res) => {
   try {
     const { courseId } = req.params;
-    // const { description, pomodoroSettings } = req.body;
     const { description } = req.body;
 
     const user = await User.findOne({ auth0Id: req.auth.payload.sub });
@@ -30,7 +30,6 @@ const startSession = async (req, res) => {
       description,
       startTime: new Date(),
       completed: false,
-      // pomodoroSettings: pomodoroSettings || user.pomodoroSettings,
     };
 
     course.sessions.push(newSession);
@@ -146,26 +145,60 @@ const deleteSession = async (req, res) => {
 const getSessions = async (req, res) => {
   try {
     const { courseId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
 
-    const user = await User.findOne({ auth0Id: req.auth.payload.sub }).select(
-      "courses",
-    );
-    if (!user)
+    const result = await User.aggregate([      { $match: { auth0Id: req.auth.payload.sub } },
+
+      { $unwind: "$courses" },
+
+      { $match: { "courses._id": new mongoose.Types.ObjectId(courseId) } },
+
+      { $replaceRoot: { newRoot: "$courses" } },
+
+      {
+        $addFields: {
+          totalSessions: { $size: "$sessions" },
+          sessions: { $slice: ["$sessions", skip, limit] },
+        },
+      },
+
+      {
+        $project: {
+          _id: 1,
+          totalSessions: 1,
+          sessions: 1,
+        },
+      },
+    ]);
+
+    if (!result.length) {
       return res
         .status(404)
-        .json({ success: false, message: "User not found" });
+        .json({ success: false, message: "User or course not found" });
+    }
 
-    const course = user.courses.id(courseId);
-    if (!course)
-      return res
-        .status(404)
-        .json({ success: false, message: "Course not found" });
+    const { sessions, totalSessions } = result[0];
+    const totalPages = Math.ceil(totalSessions / limit);
 
-    return res.status(200).json({ success: true, sessions: course.sessions });
+    return res.status(200).json({
+      success: true,
+      sessions,
+      pagination: {
+        page,
+        limit,
+        totalSessions,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     console.error("getSessions error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 module.exports = { startSession, completeSession, deleteSession, getSessions };

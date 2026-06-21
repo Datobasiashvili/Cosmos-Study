@@ -27,7 +27,9 @@ const addCourse = async (req, res) => {
 const getCourses = async (req, res) => {
   try {
     const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
-    const user = await User.findOne({ auth0Id }).select("courses");
+    const user = await User.findOne({ auth0Id })
+      .select("-courses.sessions")
+      .lean();
 
     if (!user) {
       return res
@@ -39,6 +41,71 @@ const getCourses = async (req, res) => {
     return res.status(200).json({ success: true, courses: activeCourses });
   } catch (err) {
     console.error("getCourses error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const getCosmosCourses = async (req, res) => {
+  try {
+    const auth0Id = req.auth?.payload?.sub ?? req.auth?.sub ?? req.user?.sub;
+    const [result] = await User.aggregate([
+      { $match: { auth0Id } },
+      {
+        $project: {
+          _id: 0,
+          courses: {
+            $map: {
+              input: {
+                $filter: {
+                  input: "$courses",
+                  as: "course",
+                  cond: { $ne: ["$$course.archived", true] },
+                },
+              },
+              as: "course",
+              in: {
+                _id: "$$course._id",
+                title: "$$course.title",
+                color: "$$course.color",
+                archived: "$$course.archived",
+                totalXp: "$$course.totalXp",
+                sessions: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$$course.sessions",
+                        as: "session",
+                        cond: { $eq: ["$$session.completed", true] },
+                      },
+                    },
+                    as: "session",
+                    in: {
+                      _id: "$$session._id",
+                      description: "$$session.description",
+                      startTime: "$$session.startTime",
+                      endTime: "$$session.endTime",
+                      duration: "$$session.duration",
+                      completed: "$$session.completed",
+                      xpEarned: "$$session.xpEarned",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!result) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({ success: true, courses: result.courses });
+  } catch (err) {
+    console.error("getCosmosCourses error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -128,6 +195,7 @@ const archiveCourse = async (req, res) => {
 module.exports = {
   addCourse,
   getCourses,
+  getCosmosCourses,
   updateCourse,
   deleteCourse,
   archiveCourse,

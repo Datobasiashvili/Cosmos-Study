@@ -8,6 +8,7 @@ import TimerModal from "./TimerModal";
 import CoursePill from "./CoursePill";
 import CourseRow from "./CourseRow";
 
+
 // icons
 import { PlusIcon } from "../icons/PlusIcon";
 import { OrbitIcon } from "../icons/OrbitIcon";
@@ -28,9 +29,16 @@ const SkeletonRow = () => (
 );
 
 
-export default function CourseList() {
+export default function CourseList({ onCoursesChange }) {
   const { courses, isLoading, createCourse, archiveCourse } = useCourse();
-  const { sessions, deleteSession, completeSession, fetchSessions } = useSessions();
+  const {
+    sessions,
+    isLoading: sessionsLoading,
+    deleteSession,
+    completeSession,
+    fetchSessions,
+    resetSessions,
+  } = useSessions();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -53,11 +61,28 @@ export default function CourseList() {
         activeSession.sessionId,
         elapsed,
       );
+      await onCoursesChange?.();
     }
     setActiveSession(null);
   };
 
+  const handleCreateCourse = async (course) => {
+    await createCourse(course);
+    await onCoursesChange?.();
+  };
+
+  const handleArchiveCourse = async (courseId) => {
+    await archiveCourse(courseId);
+    await onCoursesChange?.();
+  };
+
+  const handleDeleteSession = async (courseId, sessionId) => {
+    await deleteSession(courseId, sessionId);
+    await onCoursesChange?.();
+  };
+
   const handleSelectCourse = (course) => {
+    resetSessions();
     setSelectedCourse(course);
     fetchSessions(course._id);
   };
@@ -78,7 +103,7 @@ export default function CourseList() {
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] text-purple-400 font-medium bg-purple-500/10 hover:bg-purple-500/20 active:bg-purple-500/30 ring-1 ring-purple-500/20 transition-all duration-150"
           >
             <PlusIcon />
-            New
+            New 
           </button>
         </div>
 
@@ -108,7 +133,7 @@ export default function CourseList() {
         </div>
       </section>
 
-      <div className="hidden lg:flex flex-col relative w-full max-w-full rounded-xl overflow-hidden bg-[#0d0d18]/80 backdrop-blur-md ring-1 ring-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className="hidden lg:flex flex-col relative w-full min-w-[260px] rounded-xl overflow-hidden bg-[#0d0d18]/80 backdrop-blur-md ring-1 ring-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         <span className="absolute rounded-full bg-purple-400 opacity-40 pointer-events-none" style={{ width: 2, height: 2, top: 12, right: 18 }} />
         <span className="absolute rounded-full bg-purple-400 opacity-40 pointer-events-none" style={{ width: 2, height: 2, top: 40, right: 8 }} />
         <span className="absolute rounded-full bg-purple-400 opacity-40 pointer-events-none" style={{ width: 2, height: 2, bottom: 20, left: 14 }} />
@@ -128,11 +153,11 @@ export default function CourseList() {
             className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-purple-400 font-medium bg-purple-500/10 hover:bg-purple-500/20 ring-1 ring-purple-500/20 hover:ring-purple-500/40 transition-all duration-150"
           >
             <PlusIcon />
-            <span>New</span>
+            <span>Add Course</span>
           </button>
         </div>
 
-        <div className="px-2 py-2 space-y-1 max-h-[380px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10">
+        <div className="px-2 py-2 space-y-1 max-h-[180px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10">
           {isLoading ? (
             <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
           ) : isEmpty ? (
@@ -166,16 +191,16 @@ export default function CourseList() {
         course={selectedCourse}
         isOpen={!!selectedCourse}
         onClose={() => setSelectedCourse(null)}
-        onArchiveCourse={archiveCourse}
-        onDeleteSession={deleteSession}
+        onArchiveCourse={handleArchiveCourse}
+        onDeleteSession={handleDeleteSession}
         sessions={sessions}
-        onFetchSessions={fetchSessions}
+        isLoading={sessionsLoading}
       />
 
       <AddCourseModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        onAdd={createCourse}
+        onAdd={handleCreateCourse}
       />
 
       <SessionStartModal

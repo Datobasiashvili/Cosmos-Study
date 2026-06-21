@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 const cors = require("cors");
+const helmet = require("helmet");
 
 const authRoutes = require("./routes/authRoutes");
 const courseRoutes = require("./routes/courseRoutes");
@@ -14,7 +15,8 @@ app.use(
     allowedHeaders: ["Authorization", "Content-Type"],
   }),
 );
-app.use(express.json());
+app.use(helmet());
+app.use(express.json({ limit: "25kb" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
@@ -25,7 +27,7 @@ const connectDb = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB");
   } catch (err) {
-    console.error("MongoDB connection errro:", err);
+    console.error("MongoDB connection error:", err);
     process.exit(1);
   }
 };
@@ -37,6 +39,6 @@ app.use((req, res) => {
   res.status(404).send(`Route ${req.method} ${req.url} not found on this server`);
 });
 
-app.listen(process.env.PORT, "0.0.0.0", () => {
+app.listen(process.env.PORT, '0.0.0.0', () => {
   console.log(`Server running on port: ${process.env.PORT}`);
 });

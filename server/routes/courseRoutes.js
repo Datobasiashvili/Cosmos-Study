@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   addCourse,
   getCourses,
+  getCosmosCourses,
   updateCourse,
   deleteCourse,
   archiveCourse
@@ -15,6 +16,8 @@ const {
 const { requireAuth } = require("../middlewares/auth");
 
 router.get("/", requireAuth, getCourses);
+
+router.get("/cosmos", requireAuth, getCosmosCourses);
 
 router.post("/", requireAuth, validateRequest(addCourseSchema), addCourse);
 

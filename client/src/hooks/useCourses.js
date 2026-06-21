@@ -1,40 +1,23 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { apiFetch } from "../lib/helper";
 
 export function useCourse() {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { getAccessTokenSilently, loginWithRedirect, isAuthenticated } =
-    useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   const fetchCourses = useCallback(async () => {
     if (!isAuthenticated) return;
-
     setIsLoading(true);
     setError(null);
     try {
-      const token = await getAccessTokenSilently({
-        authorizationParams: {
-          audience: "https://api.cosmos.study",
-          scope: "openid profile email offline_access",
-        },
-      });
-      if (!token) return;
-      const response = await fetch(
+      const token = await getAccessTokenSilently();
+      const data = await apiFetch(
         `${import.meta.env.VITE_API_URL}/api/courses`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        token,
       );
-
-      if (!response.ok)
-        throw new Error(`Server responded with status: ${response.status}`);
-
-      const data = await response.json();
       setCourses(data.courses || []);
     } catch (err) {
       console.error("Error fetching courses:", err.message);
@@ -52,26 +35,14 @@ export function useCourse() {
   const createCourse = useCallback(
     async ({ title, color }) => {
       if (!isAuthenticated) return;
-
       setError(null);
       try {
         const token = await getAccessTokenSilently();
-        const response = await fetch(
+        const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ title, color }),
-          },
+          token,
+          { method: "POST", body: { title, color } },
         );
-
-        if (!response.ok)
-          throw new Error(`Server responded with status: ${response.status}`);
-
-        const data = await response.json();
         setCourses((prev) => [data.course, ...prev]);
       } catch (err) {
         console.error("Error adding course:", err.message);
@@ -83,22 +54,15 @@ export function useCourse() {
 
   const archiveCourse = useCallback(
     async (courseId) => {
+      if (!isAuthenticated) return;
+      setError(null);
       try {
         const token = await getAccessTokenSilently();
-        const response = await fetch(
+        await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/archive`,
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          },
+          token,
+          { method: "PATCH" },
         );
-
-        if (!response.ok)
-          throw new Error(`Server responded with status: ${response.status}`);
-
         setCourses((prev) =>
           prev.map((c) => (c._id === courseId ? { ...c, archived: true } : c)),
         );
@@ -107,7 +71,26 @@ export function useCourse() {
         setError(err.message);
       }
     },
-    [getAccessTokenSilently],
+    [isAuthenticated, getAccessTokenSilently],
+  );
+
+  const deleteCourse = useCallback(
+    async (courseId) => {
+      if (!isAuthenticated) return;
+      try {
+        const token = await getAccessTokenSilently();
+        await apiFetch(
+          `${import.meta.env.VITE_API_URL}/api/courses/${courseId}`,
+          token,
+          { method: "DELETE" },
+        );
+        setCourses((prev) => prev.filter((s) => s._id !== courseId));
+      } catch (err) {
+        console.error("Error deleting course:", err.message);
+        setError(err.message);
+      }
+    },
+    [isAuthenticated, getAccessTokenSilently],
   );
 
   return {
@@ -117,5 +100,6 @@ export function useCourse() {
     createCourse,
     error,
     archiveCourse,
+    deleteCourse,
   };
 }

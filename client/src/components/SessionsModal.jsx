@@ -26,39 +26,37 @@ export default function SessionsModal({
   onArchiveCourse,
   onDeleteSession,
   sessions = [],
-  onFetchSessions
+  isLoading = false,
 }) {
   const [visible, setVisible] = useState(false);
   const [deletingIds, setDeletingIds] = useState(new Set());
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && course) onFetchSessions(course._id);
-  }, [isOpen, course?._id]);
+  const handleClose = useCallback(() => {
+    setVisible(false);
+    setShowArchiveConfirm(false);
+    setTimeout(() => onClose(), 220);
+  }, [onClose]);
 
   useEffect(() => {
-    if (isOpen) {
-      const raf = requestAnimationFrame(() => setVisible(true));
-      return () => cancelAnimationFrame(raf);
-    } else {
-      setVisible(false);
-    }
+    const raf = requestAnimationFrame(() => setVisible(isOpen));
+    return () => cancelAnimationFrame(raf);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setArchiving(false);
+    setDeletingIds(new Set());
+    setShowArchiveConfirm(false);
+  }, [isOpen, course?._id]);
 
   useEffect(() => {
     if (!isOpen) return;
     const handle = (e) => e.key === "Escape" && handleClose();
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [isOpen]);
-
-
-  const handleClose = useCallback(() => {
-    setVisible(false);
-    setShowArchiveConfirm(false);
-    setTimeout(() => onClose(), 220);
-  }, [onClose]);
+  }, [isOpen, handleClose]);
 
   const handleDeleteSession = useCallback(async (sessionId) => {
     setDeletingIds((prev) => new Set(prev).add(sessionId));
@@ -165,9 +163,11 @@ export default function SessionsModal({
                   {course.title}
                 </h2>
                 <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                  {totalSessions} session{totalSessions !== 1 ? "s" : ""}
-                  {totalSessions > 0 && ` · ${completedSessions} completed`}
-                  {totalMinutes > 0 && ` · ${formatDuration(totalMinutes)}`}
+                  {isLoading
+                    ? "Loading sessions..."
+                    : `${totalSessions} session${totalSessions !== 1 ? "s" : ""}`}
+                  {!isLoading && totalSessions > 0 && ` · ${completedSessions} completed`}
+                  {!isLoading && totalMinutes > 0 && ` · ${formatDuration(totalMinutes)}`}
                 </p>
               </div>
             </div>
@@ -188,7 +188,21 @@ export default function SessionsModal({
           </div>
 
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-2.5 min-h-0">
-            {sessions.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 ring-1 animate-pulse"
+                  style={{
+                    backgroundColor: courseColor + "15",
+                    borderColor: courseColor + "30",
+                    color: courseColor + "80",
+                  }}
+                >
+                  <ClockIcon />
+                </div>
+                <p className="text-[12px] text-slate-600 font-mono">Loading sessions...</p>
+              </div>
+            ) : sessions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 ring-1"

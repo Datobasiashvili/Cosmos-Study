@@ -1,85 +1,100 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { apiFetch } from "../lib/helper";
 
 export function useSessions() {
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    totalSessions: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const requestIdRef = useRef(0);
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
-  const fetchSessions = useCallback(
-    async (courseId) => {
-      if (!isAuthenticated || !courseId) return;
+  const resetSessions = useCallback(() => {
+    requestIdRef.current += 1;
+    setSessions([]);
+    setIsLoading(false);
+    setError(null);
+    setPagination({
+      page: 1,
+      totalPages: 1,
+      totalSessions: 0,
+      hasNextPage: false,
+      hasPrevPage: false,
+    });
+  }, []);
 
+  const fetchSessions = useCallback(
+    async (courseId, page = 1, limit = 20) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      if (!isAuthenticated || !courseId) {
+        setSessions([]);
+        return;
+      }
+      if (page === 1) setSessions([]);
       setIsLoading(true);
       setError(null);
+
       try {
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: "https://api.cosmos.study",
-            scope: "openid profile email offline_access",
-          },
-        });
-        if (!token) {
-          throw new Error("Authentication token could not be retrieved");
-        }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          },
+        const token = await getAccessTokenSilently();
+        const data = await apiFetch(
+          `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions?page=${page}&limit=${limit}`,
+          token,
+          { method: "GET" },
         );
-
-        if (!response.ok)
-          throw new Error(`Server responded with status: ${response.status}`);
-
-        const data = await response.json();
-        setSessions(data.sessions || []);
+        
+        if (requestIdRef.current === requestId) {
+          // Append for load-more, replace for page-based
+          setSessions((prev) =>
+            page === 1
+              ? data.sessions || []
+              : [...prev, ...(data.sessions || [])],
+          );
+          setPagination(data.pagination);
+        }
       } catch (err) {
         console.error("Error fetching sessions:", err.message);
-        setError(err.message);
-        setSessions([]);
+        if (requestIdRef.current === requestId) {
+          setError(err.message);
+          setSessions([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (requestIdRef.current === requestId) setIsLoading(false);
       }
     },
     [isAuthenticated, getAccessTokenSilently],
   );
 
+  const fetchNextPage = useCallback(
+    (courseId) => {
+      if (pagination.hasNextPage && !isLoading) {
+        fetchSessions(courseId, pagination.page + 1);
+      }
+    },
+    [pagination, isLoading, fetchSessions],
+  );
+
   const createSession = useCallback(
     async (courseId, description, pomodoroSettings) => {
+      if (!isAuthenticated) return;
       setError(null);
       try {
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: "https://api.cosmos.study",
-            scope: "openid profile email offline_access",
-          },
-        });
-        if (!token) {
-          throw new Error("Authentication token could not be retrieved");
-        }
+        const token = await getAccessTokenSilently();
 
-        const response = await fetch(
+        const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ description, pomodoroSettings }),
-          },
+          token,
+          { method: "POST", body: { description, pomodoroSettings } },
         );
 
-        if (!response.ok)
-          throw new Error(`Server responded with status: ${response.status}`);
-
-        const data = await response.json();
         setSessions((prev) => [...prev, data.session]);
         return data.session;
       } catch (err) {
@@ -91,119 +106,89 @@ export function useSessions() {
   );
 
   const completeSession = useCallback(
-  async (courseId, sessionId, durationSeconds) => {
-    setError(null);
+    async (courseId, sessionId, durationSeconds) => {
+      if (!isAuthenticated);
+      setError(null);
 
-    // Convert to minutes, clamp to schema bounds (min 1, max 600)
-    const durationMinutes = Math.min(600, Math.max(1, Math.round(durationSeconds / 60)));
-
-    // Optimistic update
-    setSessions((prev) =>
-      prev.map((s) =>
-        s._id === sessionId
-          ? {
-              ...s,
-              duration: durationMinutes,
-              endTime: new Date().toISOString(),
-              completed: true,
-              xpEarned: Math.max(5, Math.round(durationMinutes * 2)),
-            }
-          : s
-      )
-    );
-
-    try {
-      const token = await getAccessTokenSilently({
-        authorizationParams: {
-          audience: "https://api.cosmos.study",
-          scope: "openid profile email offline_access",
-        },
-      });
-      if (!token) return;
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions/${sessionId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ duration: durationMinutes }), // ← only what schema expects
-        }
+      const durationMinutes = Math.min(
+        600,
+        Math.max(1, Math.round(durationSeconds / 60)),
       );
 
-      if (!response.ok)
-        throw new Error(`Server responded with status: ${response.status}`);
-
-      const data = await response.json();
-
-      // Replace optimistic entry with real server data
-      setSessions((prev) =>
-        prev.map((s) => (s._id === sessionId ? data.session : s))
-      );
-
-      return data.session;
-    } catch (err) {
-      console.error("Error completing session:", err.message);
-      setError(err.message);
-
-      // Roll back optimistic update
       setSessions((prev) =>
         prev.map((s) =>
           s._id === sessionId
-            ? { ...s, completed: false, duration: undefined, endTime: undefined, xpEarned: undefined }
-            : s
-        )
+            ? {
+                ...s,
+                duration: durationMinutes,
+                endTime: new Date().toISOString(),
+                completed: true,
+                xpEarned: Math.max(5, Math.round(durationMinutes * 2)),
+              }
+            : s,
+        ),
       );
-    }
-  },
-  [getAccessTokenSilently]
-);
+
+      try {
+        const token = await getAccessTokenSilently();
+
+        const data = await apiFetch(
+          `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions/${sessionId}`,
+          token,
+          { method: "PATCH", body: { duration: durationMinutes } },
+        );
+        setSessions((prev) =>
+          prev.map((s) => (s._id === sessionId ? data.session : s)),
+        );
+        return data.session;
+      } catch (err) {
+        console.error("Error completing session:", err.message);
+        setError(err.message);
+
+        setSessions((prev) =>
+          prev.map((s) =>
+            s._id === sessionId
+              ? {
+                  ...s,
+                  completed: false,
+                  duration: undefined,
+                  endTime: undefined,
+                  xpEarned: undefined,
+                }
+              : s,
+          ),
+        );
+      }
+    },
+    [isAuthenticated, getAccessTokenSilently],
+  );
 
   const deleteSession = useCallback(
     async (courseId, sessionId) => {
+      if (!isAuthenticated) return;
       setError(null);
+
       try {
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: "https://api.cosmos.study",
-            scope: "openid profile email offline_access",
-          },
-        });
-
-        if (!token) {
-          throw new Error("Authentication token could not be retrieved");
-        }
-
-        const response = await fetch(
+        const token = await getAccessTokenSilently();
+        await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions/${sessionId}`,
-          {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          },
+          token,
+          { method: "DELETE" },
         );
-
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`);
-        }
-
         setSessions((prev) => prev.filter((s) => s._id !== sessionId));
       } catch (err) {
         console.error("Error deleting session:", err.message);
         setError(err.message);
       }
     },
-    [getAccessTokenSilently, setSessions],
+    [isAuthenticated, getAccessTokenSilently],
   );
 
   return {
     sessions,
     isLoading,
     error,
+    resetSessions,
     fetchSessions,
     createSession,
     completeSession,

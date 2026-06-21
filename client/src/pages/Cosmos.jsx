@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useCourse } from "../hooks/useCourses";
+import { useCosmosCourses } from "../hooks/useCosmosCourses";
 import { formatDuration } from "../utils/time";
 
 const MIN_PLANET_R = 4;
@@ -79,6 +79,41 @@ function sessionTone(session) {
   return "#bfdbfe";
 }
 
+function hexToRgb(hex) {
+  const normalized = String(hex || "").replace("#", "").trim();
+  const full = normalized.length === 3
+    ? normalized.split("").map((ch) => ch + ch).join("")
+    : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return { r: 124, g: 108, b: 255 };
+
+  return {
+    r: parseInt(full.slice(0, 2), 16),
+    g: parseInt(full.slice(2, 4), 16),
+    b: parseInt(full.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  const channel = (value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+function mixColor(color, target, amount) {
+  const from = hexToRgb(color);
+  const to = hexToRgb(target);
+
+  return rgbToHex({
+    r: from.r + (to.r - from.r) * amount,
+    g: from.g + (to.g - from.g) * amount,
+    b: from.b + (to.b - from.b) * amount,
+  });
+}
+
+function safeSvgId(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
 function systemStats(courses) {
   const planets = courses.reduce((total, course) => total + completedSessions(course).length, 0);
   const minutes = courses.reduce(
@@ -89,6 +124,23 @@ function systemStats(courses) {
 
   return { planets, hours: minutes / 60 };
 }
+
+function courseXp(course) {
+  return completedSessions(course).reduce((total, session) => total + (session.xpEarned || 0), 0);
+}
+
+function xpGlow(totalXp) {
+  const t = Math.min(1, Math.sqrt(Math.max(totalXp, 0) / 1200));
+
+  return {
+    fieldOpacity: 0.018 + t * 0.034,
+    fieldScale: 0.88 + t * 0.2,
+    innerOpacity: 0.06 + t * 0.08,
+    outerOpacity: 0.09 + t * 0.12,
+    shadowBlur: 13 + t * 24,
+  };
+}
+
 function formatDate(iso) {
   return iso
     ? new Date(iso).toLocaleDateString("en-US", {
@@ -126,6 +178,82 @@ function StarField({ width, height }) {
   );
 }
 
+function PlanetSkin({ id, variant, x, y, r, color, accent, isActive }) {
+  const clipId = `planet-clip-${safeSvgId(id)}`;
+  const light = mixColor(color, "#ffffff", 0.46);
+  const pale = mixColor(color, "#ffffff", 0.68);
+  const shadow = mixColor(color, "#020617", 0.44);
+  const deep = mixColor(color, "#020617", 0.64);
+
+  return (
+    <>
+      <defs>
+        <clipPath id={clipId}>
+          <circle cx={x} cy={y} r={r} />
+        </clipPath>
+      </defs>
+
+      {variant === 1 && (
+        <g clipPath={`url(#${clipId})`}>
+          <ellipse cx={x} cy={y - r * 0.18} rx={r * 1.45} ry={r * 0.22} fill={light} opacity="0.36" />
+          <ellipse cx={x} cy={y + r * 0.22} rx={r * 1.3} ry={r * 0.18} fill={shadow} opacity="0.38" />
+          <ellipse cx={x - r * 0.15} cy={y + r * 0.02} rx={r * 1.2} ry={r * 0.12} fill={pale} opacity="0.24" />
+        </g>
+      )}
+
+      {variant === 2 && (
+        <>
+          <ellipse
+            cx={x}
+            cy={y}
+            rx={r * 1.8}
+            ry={r * 0.48}
+            fill="none"
+            stroke={pale}
+            strokeWidth={Math.max(0.8, r * 0.12)}
+            opacity={isActive ? 0.62 : 0.38}
+            transform={`rotate(-18 ${x} ${y})`}
+          />
+          <g clipPath={`url(#${clipId})`}>
+            <ellipse cx={x} cy={y} rx={r * 1.75} ry={r * 0.42} fill={deep} opacity="0.25" transform={`rotate(-18 ${x} ${y})`} />
+          </g>
+        </>
+      )}
+
+      {variant === 3 && (
+        <g clipPath={`url(#${clipId})`}>
+          <circle cx={x - r * 0.28} cy={y - r * 0.12} r={r * 0.22} fill={deep} opacity="0.42" />
+          <circle cx={x + r * 0.28} cy={y + r * 0.18} r={r * 0.16} fill={deep} opacity="0.34" />
+          <circle cx={x + r * 0.08} cy={y - r * 0.42} r={r * 0.11} fill={light} opacity="0.34" />
+        </g>
+      )}
+
+      {variant === 4 && (
+        <g clipPath={`url(#${clipId})`}>
+          <polygon
+            points={`${x - r * 0.76},${y + r * 0.36} ${x - r * 0.18},${y - r * 0.8} ${x + r * 0.22},${y + r * 0.16}`}
+            fill={pale}
+            opacity="0.3"
+          />
+          <polygon
+            points={`${x + r * 0.04},${y + r * 0.72} ${x + r * 0.86},${y - r * 0.2} ${x + r * 0.18},${y - r * 0.04}`}
+            fill={shadow}
+            opacity="0.34"
+          />
+        </g>
+      )}
+
+      {variant === 5 && (
+        <g clipPath={`url(#${clipId})`}>
+          <ellipse cx={x - r * 0.05} cy={y - r * 0.5} rx={r * 0.72} ry={r * 0.28} fill={accent} opacity="0.34" />
+          <ellipse cx={x + r * 0.14} cy={y + r * 0.5} rx={r * 0.8} ry={r * 0.24} fill={deep} opacity="0.24" />
+          <circle cx={x + r * 0.34} cy={y - r * 0.2} r={r * 0.14} fill={pale} opacity="0.46" />
+        </g>
+      )}
+    </>
+  );
+}
+
 function OrbitingPlanet({
   cx,
   cy,
@@ -150,6 +278,7 @@ function OrbitingPlanet({
   const accent = sessionTone(session);
   const hasMajorEffort = (session.duration || 0) >= 90 || (session.xpEarned || 0) >= 150;
   const label = `${duration || "session"} / ${formatDate(session.startTime)}`;
+  const variant = hash(session._id) % 6;
 
   return (
     <g
@@ -185,6 +314,16 @@ function OrbitingPlanet({
           transition: "opacity 0.2s, filter 0.2s",
         }}
       />
+      <PlanetSkin
+        id={session._id}
+        variant={variant}
+        x={pos.x}
+        y={pos.y}
+        r={planetR}
+        color={color}
+        accent={accent}
+        isActive={isSelected || isHovered}
+      />
       <circle cx={pos.x - planetR * 0.32} cy={pos.y - planetR * 0.34} r={planetR * 0.26} fill="white" opacity="0.24" />
       {(session.xpEarned || 0) > 0 && (
         <circle cx={pos.x + planetR * 0.58} cy={pos.y - planetR * 0.58} r={Math.max(1.3, planetR * 0.18)} fill={accent} opacity="0.82" />
@@ -208,11 +347,13 @@ function SolarSystem({ course, cx, cy, onSelect, selectedSessionId, time }) {
   const outerOrbit = sessions.length > 0 ? SUN_RADIUS + ORBIT_BASE + (lanes - 1) * orbitGap(sessions.length) : 0;
   const labelY = cy + (outerOrbit || SUN_RADIUS) + MAX_PLANET_R + 30;
   const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+  const totalXp = courseXp(course);
+  const glow = xpGlow(totalXp);
   const title = course.title.length > 20 ? `${course.title.slice(0, 19)}...` : course.title;
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={systemRadius(sessions.length)} fill={hex} opacity="0.026" />
+      <circle cx={cx} cy={cy} r={systemRadius(sessions.length) * glow.fieldScale} fill={hex} opacity={glow.fieldOpacity} />
 
       {Array.from({ length: lanes }, (_, i) => (
         <circle
@@ -228,15 +369,15 @@ function SolarSystem({ course, cx, cy, onSelect, selectedSessionId, time }) {
         />
       ))}
 
-      <circle cx={cx} cy={cy} r={SUN_RADIUS + 18} fill={hex} opacity="0.06" />
-      <circle cx={cx} cy={cy} r={SUN_RADIUS + 9} fill={hex} opacity="0.11" />
+      <circle cx={cx} cy={cy} r={SUN_RADIUS + 18 + Math.min(14, totalXp / 90)} fill={hex} opacity={glow.innerOpacity} />
+      <circle cx={cx} cy={cy} r={SUN_RADIUS + 9 + Math.min(8, totalXp / 150)} fill={hex} opacity={glow.outerOpacity} />
       <circle
         cx={cx}
         cy={cy}
         r={SUN_RADIUS}
         fill={hex}
         opacity="0.95"
-        style={{ filter: `drop-shadow(0 0 15px ${hex}bb)` }}
+        style={{ filter: `drop-shadow(0 0 ${glow.shadowBlur}px ${hex}bb)` }}
       />
       <circle cx={cx - 8} cy={cy - 8} r="8" fill="white" opacity="0.18" />
       <circle cx={cx + 7} cy={cy + 8} r="4" fill="black" opacity="0.08" />
@@ -288,7 +429,7 @@ function SolarSystem({ course, cx, cy, onSelect, selectedSessionId, time }) {
         style={{ userSelect: "none" }}
       >
         {sessions.length
-          ? `${sessions.length} planet${sessions.length === 1 ? "" : "s"} / ${Math.round(totalMinutes)}m`
+          ? `${sessions.length} planet${sessions.length === 1 ? "" : "s"} / ${Math.round(totalMinutes)}m / ${totalXp}xp`
           : "no completed sessions"}
       </text>
     </g>
@@ -437,7 +578,7 @@ function computeGrid(courses, w, h) {
 }
 
 export default function Cosmos() {
-  const { courses, isLoading } = useCourse();
+  const { courses, isLoading } = useCosmosCourses();
   const [selected, setSelected] = useState({ session: null, course: null });
   const containerRef = useRef(null);
   const svgRef = useRef(null);
