@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { getToken } from "../lib/getToken";
 
 export function useCosmosCourses() {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated, loginWithRedirect } = useAuth0();
 
   const fetchCosmosCourses = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -13,7 +14,7 @@ export function useCosmosCourses() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = await getAccessTokenSilently();
+      const token = await getToken(getAccessTokenSilently, loginWithRedirect);
       if (!token) {
         throw new Error("Authentication token could not be retrieved");
       }

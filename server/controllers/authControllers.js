@@ -73,4 +73,5 @@ const syncUser = async (req, res) => {
   }
 };
 
+
 module.exports = { syncUser };

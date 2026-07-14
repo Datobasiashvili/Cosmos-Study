@@ -1,4 +1,3 @@
-import { Zap } from "lucide-react";
 import { getCompletedSessions } from "./dashboardUtils";
 
 const WEEKLY_XP_GOAL = 500;
@@ -45,9 +44,6 @@ export default function XpBar({ courses = [] }) {
     <section className="rounded-lg border border-white/[0.08] bg-[#080b14]/90 px-4 py-3">
       <div className="mb-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-amber-300/80">
-            <Zap size={14} strokeWidth={1.8} />
-          </span>
           <div>
             <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber-200/80">XP Orbit</h2>
             <p className="mt-0.5 font-mono text-[10px] text-slate-600">{totalXp} total xp</p>

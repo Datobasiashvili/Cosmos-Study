@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { apiFetch } from "../lib/helper";
+import { getToken } from "../lib/getToken";
 
 export function useSessions() {
   const [sessions, setSessions] = useState([]);
@@ -14,7 +15,7 @@ export function useSessions() {
     hasPrevPage: false,
   });
   const requestIdRef = useRef(0);
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated, loginWithRedirect } = useAuth0();
 
   const resetSessions = useCallback(() => {
     requestIdRef.current += 1;
@@ -44,7 +45,7 @@ export function useSessions() {
       setError(null);
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
         const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions?page=${page}&limit=${limit}`,
           token,
@@ -87,7 +88,7 @@ export function useSessions() {
       if (!isAuthenticated) return;
       setError(null);
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
 
         const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions`,
@@ -130,7 +131,7 @@ export function useSessions() {
       );
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
 
         const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions/${sessionId}`,
@@ -169,7 +170,8 @@ export function useSessions() {
       setError(null);
 
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
+        
         await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/sessions/${sessionId}`,
           token,

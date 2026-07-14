@@ -6,7 +6,8 @@ const {
   getCosmosCourses,
   updateCourse,
   deleteCourse,
-  archiveCourse
+  archiveCourse,
+  getArchivedCourses,
 } = require("../controllers/courseControllers");
 const validateRequest = require("../middlewares/validateRequest");
 const {
@@ -14,26 +15,25 @@ const {
   updateCourseSchema,
 } = require("../middlewares/schemas/courseSchemas");
 const { requireAuth } = require("../middlewares/auth");
+const asyncHandler = require("../middlewares/asyncHandlerMiddleware");
+const { generalLimiter } = require("../middlewares/rateLimiters");
 
-router.get("/", requireAuth, getCourses);
+router.use(requireAuth, generalLimiter);
 
-router.get("/cosmos", requireAuth, getCosmosCourses);
+router.get("/", asyncHandler(getCourses));
+router.get("/archived", asyncHandler(getArchivedCourses));
+router.get("/cosmos", asyncHandler(getCosmosCourses));
 
-router.post("/", requireAuth, validateRequest(addCourseSchema), addCourse);
+router.post("/", validateRequest(addCourseSchema), asyncHandler(addCourse));
 
 router.patch(
   "/:courseId",
-  requireAuth,
   validateRequest(updateCourseSchema),
-  updateCourse,
+  asyncHandler(updateCourse),
 );
 
-router.patch(
-  "/:courseId/archive",
-  requireAuth,
-  archiveCourse,
-)
+router.patch("/:courseId/archive", asyncHandler(archiveCourse));
 
-router.delete("/:courseId", requireAuth, deleteCourse);
+router.delete("/:courseId", asyncHandler(deleteCourse));
 
 module.exports = router;

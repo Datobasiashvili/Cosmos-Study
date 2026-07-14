@@ -12,23 +12,24 @@ const {
   startSessionSchema,
   completeSessionSchema,
 } = require("../middlewares/schemas/sessionSchemas");
+const asyncHandler = require("../middlewares/asyncHandlerMiddleware");
 
-router.get("/", requireAuth, getSessions);
+router.get("/", requireAuth, asyncHandler(getSessions));
 
 router.post(
   "/",
   requireAuth,
   validateRequest(startSessionSchema),
-  startSession,
+  asyncHandler(startSession),
 );
 
 router.patch(
   "/:sessionId",
   requireAuth,
   validateRequest(completeSessionSchema),
-  completeSession,
+  asyncHandler(completeSession),
 );
 
-router.delete("/:sessionId", requireAuth, deleteSession);
+router.delete("/:sessionId", requireAuth, asyncHandler(deleteSession));
 
 module.exports = router;

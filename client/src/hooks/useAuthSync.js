@@ -1,29 +1,30 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect } from "react";
+import { apiFetch } from "../lib/helper";
+import { getToken } from "../lib/getToken";
 
 export const useAuthSync = () => {
-  const { isAuthenticated, getAccessTokenSilently, user } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently, user, loginWithRedirect } = useAuth0();
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (isLoading || !isAuthenticated || !user) return;
 
     const sync = async () => {
       try {
-        const token = await getAccessTokenSilently();
-
-        await fetch("/api/auth/sync", {
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
+        await apiFetch(`${import.meta.env.VITE_API_URL}/api/auth/sync`, token, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+          body: {
+            email: user.email,
+            username: user.nickname,
+            sub: user.sub,
           },
-          body: JSON.stringify({ email: user.email }),
         });
       } catch (err) {
-        console.error("Auth sync failed:", err);
+        console.error("Auth sync failed:", err.message);
       }
     };
 
     sync();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isLoading, user, getAccessTokenSilently, loginWithRedirect]);
 };

@@ -1,19 +1,20 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { apiFetch } from "../lib/helper";
+import { getToken } from "../lib/getToken";
 
 export function useCourse() {
   const [courses, setCourses] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCourseLoading, setIsCourseLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated, loginWithRedirect, isLoading } = useAuth0();
 
   const fetchCourses = useCallback(async () => {
-    if (!isAuthenticated) return;
-    setIsLoading(true);
+    if (isLoading || !isAuthenticated) return;
+    setIsCourseLoading(true);
     setError(null);
     try {
-      const token = await getAccessTokenSilently();
+      const token = await getToken(getAccessTokenSilently, loginWithRedirect);
       const data = await apiFetch(
         `${import.meta.env.VITE_API_URL}/api/courses`,
         token,
@@ -24,9 +25,14 @@ export function useCourse() {
       setError(err.message);
       setCourses([]);
     } finally {
-      setIsLoading(false);
+      setIsCourseLoading(false);
     }
   }, [isAuthenticated, getAccessTokenSilently]);
+
+  // TODO: finish this function:
+  // const fetchArchivedCourses = useCallback(async () => {
+
+  // })
 
   useEffect(() => {
     fetchCourses();
@@ -37,7 +43,7 @@ export function useCourse() {
       if (!isAuthenticated) return;
       setError(null);
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
         const data = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses`,
           token,
@@ -57,7 +63,7 @@ export function useCourse() {
       if (!isAuthenticated) return;
       setError(null);
       try {
-        const token = await getAccessTokenSilently();
+        const token = await getToken(getAccessTokenSilently, loginWithRedirect);
         await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}/archive`,
           token,
@@ -78,7 +84,7 @@ export function useCourse() {
     async (courseId) => {
       if (!isAuthenticated) return;
       try {
-        const token = await getAccessTokenSilently();
+        const token = getToken(getAccessTokenSilently, loginWithRedirect)
         await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/courses/${courseId}`,
           token,
@@ -96,7 +102,7 @@ export function useCourse() {
   return {
     courses,
     fetchCourses,
-    isLoading,
+    isCourseLoading,
     createCourse,
     error,
     archiveCourse,

@@ -6,6 +6,7 @@ import { StarField } from "../utils/starField";
 
 export default function CosmosLayout() {
   const { user } = useAuth0();
+  const { logout } = useAuth0();
   const location = useLocation();
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(null);
@@ -24,6 +25,10 @@ export default function CosmosLayout() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleLogout = () => {
+    logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
   const displayName = user?.nickname || "Guest User";
@@ -56,9 +61,8 @@ export default function CosmosLayout() {
                 onClick={() => navigate(`/${item.id}`)}
                 onMouseEnter={() => setHovered(item.id)}
                 onMouseLeave={() => setHovered(null)}
-                className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-all duration-200 ${
-                  isActive ? "text-white" : "text-white/35 hover:text-white/70"
-                }`}
+                className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-all duration-200 ${isActive ? "text-white" : "text-white/35 hover:text-white/70"
+                  }`}
               >
                 {isActive && (
                   <div className="absolute inset-0 rounded-lg bg-indigo-500/10 border border-indigo-400/20" />
@@ -92,6 +96,9 @@ export default function CosmosLayout() {
             </span>
           </div>
         </div>
+        <button onClick={handleLogout}>
+            logout
+          </button>
       </aside>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16">
